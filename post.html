@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post a video</title>
+</head>
+
+<body>
+    <div>
+        <h2>Post a video</h2>
+        <p>File:</p>
+        <input type="file" id="url"><br>
+        <input type="text" id="title" placeholder="enter a title..."><br>
+        <button id="sub">Submit</button>    
+        <!-- make a loading bar -->
+        <p id="load"></p>
+
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-analytics.js";
+        import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-database.js";
+        // storage
+        import { getStorage, ref as sref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.17.1/firebase-storage.js";
+        // TODO: Add SDKs for Firebase products that you want to use
+        // https://firebase.google.com/docs/web/setup#available-libraries
+
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyAAnqXpVE12iOyw0xWRYuIS9CuAhQSGdp4",
+            authDomain: "tic-tac-d8312.firebaseapp.com",
+            projectId: "tic-tac-d8312",
+            storageBucket: "tic-tac-d8312.appspot.com",
+            messagingSenderId: "460454821408",
+            appId: "1:460454821408:web:e71433519431f8738f0645",
+            measurementId: "G-E3FYNCS7B4"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getDatabase(app);
+        const dbRef = ref(db);
+        const storage = getStorage(app);
+        const storageRef = sref(storage);
+        const sub = document.getElementById("sub");
+        const url = document.getElementById("url");
+        const title = document.getElementById("title");
+        sub.addEventListener("click", () => {
+            const file = url.files[0];
+            const fileRef = sref(storageRef, title.value);
+            const uploadTask = uploadBytesResumable(fileRef, file);
+            uploadTask.on("state_changed", (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                var load = document.getElementById("load");
+                load.innerHTML = "Upload is " + progress + "% done";
+                switch (snapshot.state) {
+                    case "paused":
+                        console.log("Upload is paused");
+                        break;
+                    case "running":
+                        console.log("Upload is running");
+                        break;
+                       
+
+                }
+            }, (error) => {
+                console.log(error);
+            }, () => {
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                    console.log("File available at", downloadURL);
+                    get(ref(db, "number/")).then(function (snapshot) {
+                        set(ref(db, "videos/" + snapshot.val().num), {
+                            url: downloadURL,
+                            title: title.value,
+                            id: snapshot.val().num,
+                            views: 0
+                        });
+                        set(ref(db, "number/"), {
+                            num: snapshot.val().num/1 + 1
+                        });
+                    });
+                });
+               
+            });
+
+        });
+    </script>
+</body>
+
+</html>
